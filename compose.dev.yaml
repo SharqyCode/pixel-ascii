@@ -1,0 +1,23 @@
+services:
+  ascii-backend:
+    image: ascii-backend-dev-compose:json
+    build:
+      target: development
+    volumes:
+      - "./backend:/app"
+      - ascii-data-dev:/data
+  ascii-frontend:
+    image: ascii-fronted-dev-compose:json
+    build:
+      target: development
+    volumes:
+      - "./frontend:/app"
+      - "ascii-dev-node_modules:/app/node_modules"
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "5173:5173"
+
+volumes:
+  ascii-data-dev:
+  ascii-dev-node_modules:

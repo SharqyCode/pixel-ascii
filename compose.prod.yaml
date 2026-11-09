@@ -1,0 +1,19 @@
+services:
+  ascii-backend:
+    image: ascii-backend-prod-compose:json
+    build:
+      target: production
+    volumes:
+      - ascii-data-prod:/data
+  ascii-frontend:
+    image: ascii-fronted-prod-compose:json
+    build:
+      target: production
+      args:
+        - VITE_API_URL=http://localhost:8000
+
+    ports:
+      - "8080:80"
+
+volumes:
+  ascii-data-prod:

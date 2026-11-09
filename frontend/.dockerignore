@@ -1,0 +1,12 @@
+.dockerignore
+
+# keep real values out of the image
+.env
+.env.example
+
+.git
+
+
+node_modules/
+
+dist/

@@ -1,0 +1,17 @@
+.dockerignore
+
+# keep real values out of the image
+.env
+.env.example
+
+# python
+**/.venv/
+**/__pycache__/
+
+# keep the real
+**/db.json
+
+.git
+frontend/
+
+db/

@@ -1,0 +1,22 @@
+docker build --target development -t ascii-backend-dev:json .
+docker run --rm -d \
+--name ascii-backend-dev \
+-p 8000:8000 \
+-v "/path/on/host/machine:/app" \
+-v "ascii-data-dev:/data" \
+--env-file "/path/on/host/machine/.env" \
+ascii-backend-dev:json
+
+docker build --target production -t ascii-backend-prod:json .
+docker run --rm -d \
+--name ascii-backend-prod \
+-p 8000:8000 \
+-v "ascii-data-prod:/data" \
+--env-file "/path/on/host/machine/.env" \
+ascii-backend-prod:json
+
+docker build -t ascii-fronted-dev:json --target development .
+docker run -it --rm --name ascii-frontend-dev -p 5173:5173 -v "path/on/host/machine:/app" -v "ascii-dev-node_modules:/app/node_modules" --env-file "path/on/host/machine/.env" ascii-fronted-dev:json 
+
+docker build -t ascii-fronted-prod:json --target production .
+docker run -it --rm --name ascii-frontend-prod -p 8080:80 -v "path/on/host/machine:/app" -v "ascii-dev-node_modules:/app/node_modules" --env-file "path/on/host/machine/.env" ascii-fronted-prod:json 

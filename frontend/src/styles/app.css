@@ -1,0 +1,90 @@
+/* Layout and components. Colors come from theme.css variables. */
+#root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 12px;
+  min-height: 100vh;
+}
+
+h1 { font-size: 18px; color: var(--gold); text-shadow: var(--tsh); margin: 0; line-height: 1.5; }
+.sub { font-size: 10px; margin: 0; }
+.note { font-size: 8px; line-height: 1.9; color: var(--hint); margin: 0; }
+
+.topbar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  justify-content: space-between; width: min(100%, 1000px);
+}
+.ctrl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  justify-content: space-between; margin-top: 14px;
+}
+
+.panel {
+  background: linear-gradient(var(--pa), var(--pb));
+  border: 4px solid var(--edge);
+  box-shadow: 0 0 0 4px var(--shadow), inset 0 0 0 4px rgba(127, 127, 255, 0.2);
+  padding: 14px;
+  width: min(100%, 1000px);
+}
+
+.board {
+  width: 100%; height: auto; display: block; cursor: grab;
+  background: #0b0826; border: 4px solid var(--shadow); touch-action: none;
+}
+.board.dragging { cursor: grabbing; }
+
+button, .btn, select {
+  font-family: inherit; font-size: 10px;
+  background: linear-gradient(var(--ba), var(--bb));
+  color: var(--btxt); border: 3px solid var(--edge);
+  box-shadow: 0 4px 0 var(--bsh);
+  padding: 10px 14px; cursor: pointer; text-transform: uppercase;
+}
+button:active, .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--bsh); }
+
+.rain {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: -1; pointer-events: none;
+}
+.hidden { display: none !important; }
+
+.modal {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
+  display: flex; align-items: center; justify-content: center; z-index: 10;
+}
+.box {
+  background: linear-gradient(var(--pa), var(--pb));
+  border: 4px solid var(--edge); box-shadow: 0 0 0 4px var(--shadow);
+  padding: 20px; width: min(90vw, 340px);
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.tabs { display: flex; gap: 8px; }
+.tabs .tab {
+  flex: 1; background: transparent; color: var(--text);
+  border: 2px solid var(--edge); box-shadow: none;
+  padding: 8px 10px; font-size: 8px; opacity: 0.6;
+}
+.tabs .tab.active { background: rgba(255, 255, 255, 0.14); opacity: 1; }
+.tabs .tab:active { transform: none; }
+
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 9px; }
+.field input {
+  font-family: inherit; font-size: 11px; padding: 8px;
+  background: #000; color: var(--text); border: 3px solid var(--edge);
+}
+.field input.invalid { border-color: #ff6b6b; box-shadow: 0 0 0 2px #ff6b6b; }
+.error { color: #ff6b6b; font-size: 8px; min-height: 12px; margin: 0; }
+
+.alert-modal { z-index: 20; }
+.alert-box { align-items: center; text-align: center; width: min(90vw, 300px); }
+.alert-head { display: flex; gap: 10px; align-items: center; font-size: 10px; color: var(--gold); }
+.alert-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; background: #ff6b6b; color: #fff;
+  border: 3px solid #fff; font-size: 12px;
+}
+.alert-msg { font-size: 9px; line-height: 1.8; margin: 0; }

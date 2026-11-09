@@ -1,0 +1,19 @@
+services:
+  ascii-backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    networks:
+      - ascii-net
+  ascii-frontend:
+    build:
+      context: ./frontend
+    networks:
+      - ascii-net
+
+networks:
+  ascii-net:
+    driver: bridge
