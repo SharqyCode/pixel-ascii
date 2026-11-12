@@ -1,25 +1,34 @@
-import base64, hashlib, hmac, json, os, secrets, uuid
+import base64, hashlib, hmac, os, secrets, uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
 import jwt
+import psycopg
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.staticfiles import StaticFiles
-
 from pydantic import BaseModel, Field
 
 BASE = Path(__file__).parent
-load_dotenv(BASE / ".env")  # reads JWT_SECRET and CORS_ORIGINS from backend/.env
-DB_PATH = Path(os.getenv("DATA_PATH", "/data")) / "db.json"
-SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
+load_dotenv(BASE / ".env")  # local runs only; in Docker the env file is injected
 
-if SECRET == "dev-secret-change-me" or not SECRET:
+# If JWT secret is not set or kept default, refuse to start up server
+SECRET = os.getenv("JWT_SECRET", "")
+if not SECRET or SECRET == "dev-secret-change-me":
     raise RuntimeError(
         "JWT_SECRET is not set. Add a long random value to your env file "
         "or pass it with --env-file / the compose environment."
+    )
+
+# e.g. postgresql://ascii_user:password@ascii-db:5432/ascii_db
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Point it at the Postgres server, for example "
+        "postgresql://USER:PASSWORD@ascii-db:5432/DBNAME"
     )
 
 ALGO = "HS256"
@@ -28,7 +37,34 @@ TOKEN_MINUTES = 60
 CORS_ORIGINS = [o.strip() for o in os.getenv(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
 
-app = FastAPI(title="Pixel ASCII API")
+# Temporary schema setup, run at startup. Move to the migration tool when it is added.
+SCHEMA_STATEMENTS = [
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        id            TEXT PRIMARY KEY,
+        username      TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+    """,
+    # usernames are unique regardless of case, enforced by the database
+    "CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))",
+]
+
+
+def get_conn():
+    return psycopg.connect(DATABASE_URL)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    with get_conn() as conn:
+        for statement in SCHEMA_STATEMENTS:
+            conn.execute(statement)
+    yield
+
+
+app = FastAPI(title="Pixel ASCII API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -37,12 +73,17 @@ app.add_middleware(
 )
 bearer = HTTPBearer()
 
-# ---------- dummy "database": plain JSON file ----------
-def load_db():
-    return json.loads(DB_PATH.read_text()) if DB_PATH.exists() else {"users": []}
 
-def save_db(db):
-    DB_PATH.write_text(json.dumps(db, indent=2))
+# ---------- database access ----------
+def find_user(username):
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT id, username, password_hash FROM users WHERE lower(username) = lower(%s)",
+            (username,),
+        ).fetchone()
+    if row is None:
+        return None
+    return {"id": row[0], "username": row[1], "password_hash": row[2]}
 
 
 # ---------- password hashing (stdlib only) ----------
@@ -66,7 +107,7 @@ def current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)):
         payload = jwt.decode(creds.credentials, SECRET, algorithms=[ALGO])
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid or expired token")
-    user = next((u for u in load_db()["users"] if u["username"] == payload["sub"]), None)
+    user = find_user(payload["sub"])
     if not user:
         raise HTTPException(401, "Unknown user")
     return user
@@ -82,22 +123,24 @@ class Credentials(BaseModel):
 
 @app.post("/api/auth/register", status_code=201)
 def register(body: Credentials):
-    db = load_db()
-    if any(u["username"].lower() == body.username.lower() for u in db["users"]):
-        raise HTTPException(409, "Username already taken")
     user = {
-        "id": uuid.uuid4().hex[:8],
+        "id": str(uuid.uuid4()),
         "username": body.username,
         "password_hash": hash_password(body.password),
-        "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    db["users"].append(user)
-    save_db(db)
+    try:
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO users (id, username, password_hash) VALUES (%s, %s, %s)",
+                (user["id"], user["username"], user["password_hash"]),
+            )
+    except psycopg.errors.UniqueViolation:
+        raise HTTPException(409, "Username already taken")
     return {"token": create_token(user), "user": public(user)}
 
 @app.post("/api/auth/login")
 def login(body: Credentials):
-    user = next((u for u in load_db()["users"] if u["username"].lower() == body.username.lower()), None)
+    user = find_user(body.username)
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Wrong username or password")
     return {"token": create_token(user), "user": public(user)}
@@ -127,6 +170,10 @@ def export_png(body: PngExport, user=Depends(current_user)):
     return Response(base64.b64decode(body.data_url[len(prefix):]), media_type="image/png",
                     headers={"Content-Disposition": 'attachment; filename="ascii.png"'})
 
-@app.get("/")
-def home():
-    return "home endpoint"
+
+# ---------- health check (used by Docker Compose) ----------
+@app.get("/health")
+def health():
+    with get_conn() as conn:
+        conn.execute("SELECT 1")
+    return {"status": "ok"}

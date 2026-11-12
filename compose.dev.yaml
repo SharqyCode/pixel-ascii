@@ -1,23 +1,38 @@
 services:
   ascii-backend:
-    image: ascii-backend-dev-compose:json
+    image: sharqycode/ascii-backend:dev
     build:
       target: development
     volumes:
       - "./backend:/app"
-      - ascii-data-dev:/data
+      - "ascii-data-dev:/data"
+    env_file:
+      - ./backend/.env.dev
   ascii-frontend:
-    image: ascii-fronted-dev-compose:json
+    image: sharqycode/ascii-frontend:dev
     build:
       target: development
     volumes:
       - "./frontend:/app"
       - "ascii-dev-node_modules:/app/node_modules"
     env_file:
-      - ./frontend/.env
+      - ./frontend/.env.dev
     ports:
       - "5173:5173"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  ascii-db:
+    env_file:
+      - ./db/.env.dev
+    volumes:
+      - "ascii-db-dev:/var/lib/postgresql"
+    ports:
+      - 127.0.0.1:5433:5432
 
 volumes:
-  ascii-data-dev:
   ascii-dev-node_modules:
+  ascii-db-dev:

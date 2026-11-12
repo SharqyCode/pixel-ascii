@@ -8,7 +8,6 @@ dist/
 !.env.example
 
 # Local user data (dev database; never commit accounts or password hashes)
-db/
 **/db.json
 
 # Python
