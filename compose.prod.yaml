@@ -26,7 +26,7 @@ services:
       - "ascii-db-prod:/var/lib/postgresql"
   ascii-migrate:
     environment:
-      - DATABASE_URL=postgresql://admin:C3Tc5%23kgp%23%3DK%23-YL7QEx@ascii-db:5432/ascii_db
+      - DATABASE_URL=postgresql://admin:C3Tc5%23kgp%23%3DK%23-YL7QEx@ascii-db:5432/ascii_db?sslmode=disable
 
 volumes:
   ascii-db-prod:
