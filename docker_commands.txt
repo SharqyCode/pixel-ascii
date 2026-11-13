@@ -20,3 +20,12 @@ docker run -it --rm --name ascii-frontend-dev -p 5173:5173 -v "path/on/host/mach
 
 docker build -t ascii-fronted-prod:json --target production .
 docker run -it --rm --name ascii-frontend-prod -p 8080:80 -v "path/on/host/machine:/app" -v "ascii-dev-node_modules:/app/node_modules" --env-file "path/on/host/machine/.env" ascii-fronted-prod:json 
+
+
+docker run -it --rm \
+-v "$(pwd)/backend/migrations:/app/db/migrations" \
+--network=host \
+-e DATABASE_URL=postgresql://admin:P%40ssw0rd@127.0.0.1:5433/ascii_db?sslmode=disable \
+-e DBMATE_SCHEMA_FILE=/app/db/migrations/schema.sql \
+amacneil/dbmate:2 \
+dump

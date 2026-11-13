@@ -8,8 +8,8 @@ services:
       - ascii-net
       - ascii-db
     depends_on:
-      ascii-db:
-        condition: service_healthy
+      ascii-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -37,6 +37,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+  ascii-migrate:
+    build:
+      context: ./backend/migrations
+    image: sharqycode/ascii-migrate
+    depends_on:
+      ascii-db:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - ascii-db
 
 networks:
   ascii-net:

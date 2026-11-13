@@ -37,34 +37,12 @@ TOKEN_MINUTES = 60
 CORS_ORIGINS = [o.strip() for o in os.getenv(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
 
-# Temporary schema setup, run at startup. Move to the migration tool when it is added.
-SCHEMA_STATEMENTS = [
-    """
-    CREATE TABLE IF NOT EXISTS users (
-        id            TEXT PRIMARY KEY,
-        username      TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-    """,
-    # usernames are unique regardless of case, enforced by the database
-    "CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))",
-]
-
 
 def get_conn():
     return psycopg.connect(DATABASE_URL)
 
 
-@asynccontextmanager
-async def lifespan(app):
-    with get_conn() as conn:
-        for statement in SCHEMA_STATEMENTS:
-            conn.execute(statement)
-    yield
-
-
-app = FastAPI(title="Pixel ASCII API", lifespan=lifespan)
+app = FastAPI(title="Pixel ASCII API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,

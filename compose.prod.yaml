@@ -3,8 +3,6 @@ services:
     image: sharqycode/ascii-backend:prod
     build:
       target: production
-    volumes:
-      - ascii-data-prod:/data
     env_file:
       - ./backend/.env.prod
   ascii-frontend:
@@ -26,6 +24,9 @@ services:
       - ./db/.env.prod
     volumes:
       - "ascii-db-prod:/var/lib/postgresql"
+  ascii-migrate:
+    environment:
+      - DATABASE_URL=postgresql://admin:C3Tc5%23kgp%23%3DK%23-YL7QEx@ascii-db:5432/ascii_db
 
 volumes:
   ascii-db-prod:
