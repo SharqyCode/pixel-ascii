@@ -32,8 +32,8 @@ services:
     ports:
       - "127.0.0.1:5433:5432"
   ascii-migrate:
-    environment:
-      - DATABASE_URL=postgresql://admin:P%40ssw0rd@ascii-db:5432/ascii_db?sslmode=disable
+    env_file:
+      - ./backend/migrations/.env.dev
 
 volumes:
   ascii-dev-node_modules:

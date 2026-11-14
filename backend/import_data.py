@@ -6,7 +6,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def get_conn():
     return psycopg.connect(DATABASE_URL)
 
-with open("db.json", "r", encoding="utf-8") as old_db:
+with open("/db/db.json", "r", encoding="utf-8") as old_db:
     data = json.load(old_db)
 users = data["users"]
 

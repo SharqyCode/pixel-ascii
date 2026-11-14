@@ -29,3 +29,11 @@ docker run -it --rm \
 -e DBMATE_SCHEMA_FILE=/app/db/migrations/schema.sql \
 amacneil/dbmate:2 \
 dump
+
+
+docker run --rm \
+-v ./db:/db \
+--network=host \
+-e DATABASE_URL=postgresql://admin:P%40ssw0rd123@127.0.0.1:5433/ascii_db \
+sharqycode/ascii-backend:dev \
+python3 /app/import_data.py

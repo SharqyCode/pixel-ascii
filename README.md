@@ -35,6 +35,10 @@ A retro-styled web app that converts uploaded pictures into ASCII art. Drag the 
 │   ├── .dockerignore
 │   ├── .env.example         # template for backend/.env.dev and backend/.env.prod
 │   ├── main.py              # FastAPI app: auth, exports, database access
+│   ├── migrations/          # dbmate migrations and schema snapshot
+│   │   ├── Dockerfile       # one-off migration image
+│   │   ├── schema.sql       # committed snapshot of the current schema
+│   │   └── 2026..._create_users_table.sql
 │   └── requirements.txt
 ├── db/                      # local-only: database env files (never committed)
 │   ├── .env.dev
@@ -157,7 +161,17 @@ To inspect the database without opening a shell in the container:
 docker compose -f compose.base.yaml -f compose.dev.yaml exec ascii-db psql -U USER -d DBNAME -c "SELECT id, username, created_at FROM users;"
 ```
 
-The schema is created automatically when the backend starts.
+The schema is managed by migrations (see Database migrations below).
+
+## Database migrations
+
+Schema changes are managed with [dbmate](https://github.com/amacneil/dbmate). Migration files live in `backend/migrations/` and are named `YYYYMMDDHHMMSS_name.sql`.
+
+- Each environment runs the migrations automatically with the `ascii-migrate` service. The backend starts only after it finishes successfully.
+- To add a change, create a new migration file with a later timestamp. Don't edit files that have already been applied.
+- `backend/migrations/schema.sql` is a snapshot of the current schema. Update it whenever a migration changes the schema, and commit it so schema changes show up in review.
+
+To see which migrations have run, use the `ascii-migrate` logs or dbmate's status command against the database.
 
 ## Running without Docker
 
@@ -205,7 +219,7 @@ Usernames are 3 to 32 letters, digits, or underscores, and are unique regardless
 
 ## Limitations
 
-- The database schema is created in application code at startup. A migration tool will replace it.
+- Schema changes go through dbmate migrations only. Never edit a migration that has already run; add a new one instead.
 - Login tokens are stored in the browser's `localStorage`, which is readable by any script on the page. Acceptable for a demo, not for sensitive data.
 - The stack serves plain HTTP. Put it behind a reverse proxy with TLS before exposing it publicly.
 - Client-side routing is not configured in nginx. Only the root route is supported today.

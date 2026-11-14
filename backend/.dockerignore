@@ -1,8 +1,7 @@
 .dockerignore
 
 # keep real values out of the image
-.env
-.env.example
+.env.*
 
 # python
 **/.venv/
