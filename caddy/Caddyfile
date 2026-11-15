@@ -1,0 +1,12 @@
+ascii.test {
+    tls internal
+
+    handle /api/* {
+        reverse_proxy ascii-backend:8000
+    }
+
+    handle {
+        reverse_proxy ascii-frontend:80
+    }
+}
+
