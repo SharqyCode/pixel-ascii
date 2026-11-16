@@ -6,11 +6,14 @@ from pathlib import Path
 import jwt
 import psycopg
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 BASE = Path(__file__).parent
 load_dotenv(BASE / ".env")  # local runs only; in Docker the env file is injected
@@ -43,6 +46,30 @@ def get_conn():
 
 
 app = FastAPI(title="Pixel ASCII API")
+
+# Rate limits per client address: login attempts and new registrations
+LOGIN_LIMIT = "5/minute"
+REGISTER_LIMIT = "3/minute"
+
+
+def client_ip(request: Request):
+    # Caddy appends the real client address to X-Forwarded-For; use the last entry
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=client_ip)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many attempts. Please wait a minute and try again."},
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -100,7 +127,8 @@ class Credentials(BaseModel):
     password: str = Field(min_length=6, max_length=128)
 
 @app.post("/api/auth/register", status_code=201)
-def register(body: Credentials):
+@limiter.limit(REGISTER_LIMIT)
+def register(request: Request, body: Credentials):
     user = {
         "id": str(uuid.uuid4()),
         "username": body.username,
@@ -117,7 +145,8 @@ def register(body: Credentials):
     return {"token": create_token(user), "user": public(user)}
 
 @app.post("/api/auth/login")
-def login(body: Credentials):
+@limiter.limit(LOGIN_LIMIT)
+def login(request: Request, body: Credentials):
     user = find_user(body.username)
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Wrong username or password")
