@@ -5,14 +5,14 @@ services:
       target: production
     env_file:
       - ./backend/.env.prod
+    ports: !reset []
   ascii-frontend:
     image: sharqycode/ascii-frontend:prod
     build:
       target: production
       args:
-        - VITE_API_URL=http://localhost:8000
-    ports:
-      - "8080:80"
+        - VITE_API_URL=https://ascii.test
+    ports: !reset []
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1"]
       interval: 30s
@@ -27,6 +27,22 @@ services:
   ascii-migrate:
     env_file:
       - ./backend/migrations/.env.prod
+  caddy:
+    image: caddy:2.11.9-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - ascii-net
+    depends_on:
+      - ascii-frontend
+      - ascii-backend
 
 volumes:
   ascii-db-prod:
+  caddy-data:
+  caddy-config:
